@@ -39,6 +39,10 @@ public class ExecutorGitLogCommand implements GitLogCommand {
         return lastRevisionChecked;
     }
 
+    public String getHeadRevision() throws IOException {
+        return commandExecutor.execute(new String[]{gitExe, "show-ref", "-s", "HEAD"}, sourceCodeDirectory).trim();
+    }
+
     private String[] getCommandLine() {
         if (lastRevisionChecked != null) {
             return new String[]{gitExe, "log", "--numstat", "--date=iso8601", "--since=\"" + lastRevisionChecked + "\""};

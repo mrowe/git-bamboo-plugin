@@ -1,55 +1,55 @@
 package uk.co.pols.bamboo.gitplugin.client;
 
 import com.atlassian.bamboo.build.logger.BuildLogger;
-import com.atlassian.bamboo.commit.Commit;
 import com.atlassian.bamboo.repository.RepositoryException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import uk.co.pols.bamboo.gitplugin.client.commands.*;
-import uk.co.pols.bamboo.gitplugin.GitRepositoryConfig;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class CmdLineGitClient implements GitClient {
     private static final Log log = LogFactory.getLog(CmdLineGitClient.class);
     private GitCommandDiscoverer gitCommandDiscoverer = gitCommandDiscoverer();
 
-    public String getLatestUpdate(BuildLogger buildLogger, String repositoryUrl, String branch, String planKey, String lastRevisionChecked, List<Commit> commits, File sourceCodeDirectory) throws RepositoryException {
+    public String getLatestRevision(BuildLogger buildLogger, String repositoryUrl, String branch, String planKey) throws RepositoryException {
+        log.info(buildLogger.addBuildLogEntry("Checking for changes on '" + planKey + "' at '" + branch + "' @ '" + repositoryUrl + "'"));
         try {
-            pullCommand(sourceCodeDirectory).pullUpdatesFromRemoteRepository(buildLogger, repositoryUrl, branch);
-
-            GitLogCommand gitLogCommand = logCommand(sourceCodeDirectory, lastRevisionChecked);
-            List<Commit> gitCommits = gitLogCommand.extractCommits();
-            String latestRevisionOnServer = gitLogCommand.getLastRevisionChecked();
-
-            if (lastRevisionChecked == null) {
-                log.info(buildLogger.addBuildLogEntry("Never checked logs for '" + planKey + "' on path '" + repositoryUrl + "'  setting latest revision to " + latestRevisionOnServer));
-                return latestRevisionOnServer;
-            }
-            if (!lastRevisionChecked.equals(latestRevisionOnServer)) {
-                log.info(buildLogger.addBuildLogEntry("Collecting changes for '" + planKey + "' on path '" + repositoryUrl + "' since " + lastRevisionChecked));
-                commits.addAll(gitCommits);
-            }
-
-            return latestRevisionOnServer;
+            return listRemoteCommand().getLastCommit(repositoryUrl, branch);
         } catch (IOException e) {
-            throw new RepositoryException("Failed to get latest update", e);
+            throw new RepositoryException("Could not get latest revision from remote repository '" + repositoryUrl + "'", e);
         }
     }
 
-    public String initialiseRepository(File sourceCodeDirectory, String planKey, String vcsRevisionKey, GitRepositoryConfig gitRepositoryConfig, boolean isWorkspaceEmpty, BuildLogger buildLogger) throws RepositoryException {
-        if (isWorkspaceEmpty) {
-            initialiseRemoteRepository(sourceCodeDirectory, gitRepositoryConfig.getRepositoryUrl(), gitRepositoryConfig.getBranch(), buildLogger);
-        }
+    public String pullFromRemote(BuildLogger buildLogger, String repositoryUrl, String branch, String planKey, String lastRevisionChecked, File sourceCodeDirectory) throws RepositoryException {
+        log.info(buildLogger.addBuildLogEntry("Pulling changes on '" + planKey + "' from '" + branch + "' @ '" + repositoryUrl));
 
-        return getLatestUpdate(buildLogger, gitRepositoryConfig.getRepositoryUrl(), gitRepositoryConfig.getBranch(), planKey, vcsRevisionKey, new ArrayList<Commit>(), sourceCodeDirectory);
+        try {
+            pullCommand(sourceCodeDirectory).pullUpdatesFromRemoteRepository(buildLogger, repositoryUrl, branch);
+            return logCommand(sourceCodeDirectory, null /* FIXME */).getHeadRevision();
+        } catch (IOException e) {
+            throw new RepositoryException("Could not update working dir '" + sourceCodeDirectory.getAbsolutePath() + "' from remote repository '" + repositoryUrl + "'", e);
+        }
+    }
+
+    public void initialiseRepository(BuildLogger buildLogger, String repositoryUrl, String branch, File sourceCodeDirectory) throws RepositoryException {
+        log.info(buildLogger.addBuildLogEntry(sourceCodeDirectory.getAbsolutePath() + " is empty. Creating new git repository."));
+        try {
+            sourceCodeDirectory.mkdirs();
+            initCommand(sourceCodeDirectory).init(buildLogger);
+            remoteCommand(sourceCodeDirectory).add_origin(repositoryUrl, branch, buildLogger);
+        } catch (IOException e) {
+            throw new RepositoryException("Failed to initialise repository", e);
+        }
     }
 
     protected GitPullCommand pullCommand(File sourceCodeDirectory) {
         return new ExecutorGitPullCommand(gitCommandDiscoverer.gitCommand(), sourceCodeDirectory, new AntCommandExecutor());
+    }
+
+    protected GitListRemoteCommand listRemoteCommand() {
+        return new ExecutorGitListRemoteCommand(gitCommandDiscoverer.gitCommand(), new AntCommandExecutor());
     }
 
     protected GitLogCommand logCommand(File sourceCodeDirectory, String lastRevisionChecked) {
@@ -62,17 +62,6 @@ public class CmdLineGitClient implements GitClient {
 
     protected GitRemoteCommand remoteCommand(File sourceCodeDirectory) {
         return new ExecutorGitRemoteCommand(gitCommandDiscoverer.gitCommand(), sourceCodeDirectory, new AntCommandExecutor());
-    }
-
-    private void initialiseRemoteRepository(File sourceDirectory, String repositoryUrl, String branch, BuildLogger buildLogger) throws RepositoryException {
-        log.info(buildLogger.addBuildLogEntry(sourceDirectory.getAbsolutePath() + " is empty. Creating new git repository"));
-        try {
-            sourceDirectory.mkdirs();
-            initCommand(sourceDirectory).init(buildLogger);
-            remoteCommand(sourceDirectory).add_origin(repositoryUrl, branch, buildLogger);
-        } catch (IOException e) {
-            throw new RepositoryException("Failed to initialise repository", e);
-        }
     }
 
     protected GitCommandDiscoverer gitCommandDiscoverer() {

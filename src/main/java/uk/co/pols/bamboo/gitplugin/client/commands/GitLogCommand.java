@@ -9,4 +9,6 @@ public interface GitLogCommand {
     List<Commit> extractCommits() throws IOException;
 
     String getLastRevisionChecked();
+
+    String getHeadRevision() throws IOException;
 }

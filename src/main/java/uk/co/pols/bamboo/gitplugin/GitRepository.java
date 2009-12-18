@@ -1,7 +1,9 @@
 package uk.co.pols.bamboo.gitplugin;
 
+import com.atlassian.bamboo.build.logger.BuildLogger;
 import com.atlassian.bamboo.commit.Commit;
 import com.atlassian.bamboo.commit.CommitFile;
+import com.atlassian.bamboo.commit.CommitImpl;
 import com.atlassian.bamboo.repository.*;
 import com.atlassian.bamboo.utils.error.ErrorCollection;
 import com.atlassian.bamboo.v2.build.BuildChanges;
@@ -11,7 +13,10 @@ import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.lang.builder.CompareToBuilder;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,33 +24,49 @@ import uk.co.pols.bamboo.gitplugin.client.CmdLineGitClient;
 import uk.co.pols.bamboo.gitplugin.client.GitClient;
 
 public class GitRepository extends AbstractRepository implements WebRepositoryEnabledRepository {
-    private GitRepositoryConfig gitRepositoryConfig = gitRepositoryConfig();
+    private final GitRepositoryConfig gitRepositoryConfig = gitRepositoryConfig();
 
-    public synchronized BuildChanges collectChangesSinceLastBuild(final String planKey, final String lastVcsRevisionKey) throws RepositoryException {
+    private static final Log log = LogFactory.getLog(GitRepository.class);
 
-        List<Commit> commits = new ArrayList<Commit>();
-
-        String latestCommitTime = gitClient().getLatestUpdate(
+    public synchronized BuildChanges collectChangesSinceLastBuild(final String planKey, final String lastBuiltRevisionKey) throws RepositoryException {
+        String latestRevision = gitClient().getLatestRevision(
                 buildLoggerManager.getBuildLogger(planKey),
                 gitRepositoryConfig.getRepositoryUrl(),
                 gitRepositoryConfig.getBranch(),
-                planKey,
-                lastVcsRevisionKey,
-                commits,
-                getSourceCodeDirectory(planKey)
-        );
+                planKey);
 
-        return new BuildChangesImpl(String.valueOf(latestCommitTime), commits);
+        log.info("Last built rev: " + lastBuiltRevisionKey);
+        log.info("Latest rev in repo: " + latestRevision);
+
+        List<Commit> commits = new ArrayList<Commit>();
+        if (!latestRevision.equals(lastBuiltRevisionKey)) {
+            // TODO populate commits - for now, having something in the list of commits causes Bamboo to trigger a build
+            commits.add(new CommitImpl("git committers"));
+        }
+        return new BuildChangesImpl(latestRevision, commits);
     }
 
     public String retrieveSourceCode(final String planKey, final String vcsRevisionKey) throws RepositoryException {
-        return gitClient().initialiseRepository(
-                getSourceCodeDirectory(planKey),
+        final BuildLogger buildLogger = buildLoggerManager.getBuildLogger(planKey);
+        final File sourceCodeDirectory = getSourceCodeDirectory(planKey);
+
+        if (isWorkspaceEmpty(sourceCodeDirectory)) {
+            gitClient().initialiseRepository(
+                    buildLogger,
+                    gitRepositoryConfig.getRepositoryUrl(),
+                    gitRepositoryConfig.getBranch(),
+                    sourceCodeDirectory);
+        }
+
+        final String newRevision = gitClient().pullFromRemote(
+                buildLogger,
+                gitRepositoryConfig.getRepositoryUrl(),
+                gitRepositoryConfig.getBranch(),
                 planKey,
                 vcsRevisionKey,
-                gitRepositoryConfig,
-                isWorkspaceEmpty(getSourceCodeDirectory(planKey)),
-                buildLoggerManager.getBuildLogger(planKey));
+                sourceCodeDirectory);
+
+        return newRevision;
     }
 
     @Override
