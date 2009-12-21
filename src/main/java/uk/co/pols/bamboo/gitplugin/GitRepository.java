@@ -36,9 +36,6 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
                 gitRepositoryConfig.getBranch(),
                 planKey);
 
-        log.info("Last built rev: " + lastBuiltRevisionKey);
-        log.info("Latest rev in repo: " + latestRevision);
-
         if (latestRevision.equals(lastBuiltRevisionKey)) {
             return new BuildChangesImpl(latestRevision);
         }
@@ -61,15 +58,13 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
                     sourceCodeDirectory);
         }
 
-        final String newRevision = gitClient().pullFromRemote(
+        return gitClient().pullFromRemote(
                 buildLogger,
                 gitRepositoryConfig.getRepositoryUrl(),
                 gitRepositoryConfig.getBranch(),
                 planKey,
                 vcsRevisionKey,
                 sourceCodeDirectory);
-
-        return newRevision;
     }
 
     @Override
