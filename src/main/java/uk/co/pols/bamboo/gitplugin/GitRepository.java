@@ -103,7 +103,7 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
     }
 
     public String getName() {
-        return "GitHub";
+        return "Git";
     }
 
     public String getUrl() {
