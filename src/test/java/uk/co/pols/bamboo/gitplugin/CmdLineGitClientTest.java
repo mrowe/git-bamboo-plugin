@@ -62,7 +62,7 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
         checking(new Expectations() {{
             one(buildLogger).addBuildLogEntry("Pulling changes on 'plankey' from 'master' @ 'repository.url");
             one(gitPullCommand).pullUpdatesFromRemoteRepository(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH);
-            one(gitLogCommand).getHeadRevision(); will(returnValue(LAST_REVISION_CHECKED));
+            one(gitLogCommand).getHeadRevision(REPOSITORY_BRANCH); will(returnValue(LAST_REVISION_CHECKED));
         }});
 
         final String result = gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, LAST_REVISION_CHECKED, SOURCE_CODE_DIRECTORY);
@@ -92,7 +92,7 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
         checking(new Expectations() {{
             one(buildLogger).addBuildLogEntry("Pulling changes on 'plankey' from 'master' @ 'repository.url");
             one(gitPullCommand).pullUpdatesFromRemoteRepository(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH);
-            one(gitLogCommand).getHeadRevision(); will(throwException(ioException));
+            one(gitLogCommand).getHeadRevision(REPOSITORY_BRANCH); will(throwException(ioException));
         }});
 
         try {

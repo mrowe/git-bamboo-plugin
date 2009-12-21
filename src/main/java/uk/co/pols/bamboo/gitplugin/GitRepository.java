@@ -18,6 +18,7 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import uk.co.pols.bamboo.gitplugin.client.CmdLineGitClient;
@@ -29,7 +30,7 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
     private static final Log log = LogFactory.getLog(GitRepository.class);
 
     public synchronized BuildChanges collectChangesSinceLastBuild(final String planKey, final String lastBuiltRevisionKey) throws RepositoryException {
-        String latestRevision = gitClient().getLatestRevision(
+        final String latestRevision = gitClient().getLatestRevision(
                 buildLoggerManager.getBuildLogger(planKey),
                 gitRepositoryConfig.getRepositoryUrl(),
                 gitRepositoryConfig.getBranch(),
@@ -38,11 +39,13 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
         log.info("Last built rev: " + lastBuiltRevisionKey);
         log.info("Latest rev in repo: " + latestRevision);
 
-        List<Commit> commits = new ArrayList<Commit>();
-        if (!latestRevision.equals(lastBuiltRevisionKey)) {
-            // TODO populate commits - for now, having something in the list of commits causes Bamboo to trigger a build
-            commits.add(new CommitImpl("git committers"));
+        if (latestRevision.equals(lastBuiltRevisionKey)) {
+            return new BuildChangesImpl(latestRevision);
         }
+
+        final List<Commit> commits = new ArrayList<Commit>();
+        // TODO populate commits - for now, having something in the list of commits causes Bamboo to trigger a build
+        commits.add(new CommitImpl("git committers"));
         return new BuildChangesImpl(latestRevision, commits);
     }
 

@@ -10,5 +10,5 @@ public interface GitLogCommand {
 
     String getLastRevisionChecked();
 
-    String getHeadRevision() throws IOException;
+    String getHeadRevision(String branch) throws IOException;
 }

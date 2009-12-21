@@ -42,6 +42,18 @@ public class ExecutorGitLogCommandTest extends MockObjectTestCase {
         assertEquals("2009-03-13 01:27:52 +0000", gitLogCommand.getLastRevisionChecked());
     }
 
+    public void testGetsTheHeadRevision() throws IOException {
+        GitLogCommand gitLogCommand = new ExecutorGitLogCommand(GIT_EXE, SOURCE_CODE_DIRECTORY, DATE_OF_LAST_BUILD, commandExecutor);
+
+        checking(new Expectations() {{
+            one(commandExecutor).execute(new String[]{GIT_EXE, "show-ref", "-s", "branch"}, SOURCE_CODE_DIRECTORY); will(returnValue(mostRecentCommitHash));
+        }});
+
+        assertEquals(mostRecentCommitHash, gitLogCommand.getHeadRevision("branch"));
+    }
+
+    private String mostRecentCommitHash = "60f6a6cabe727b14897b4d98bca91ce646a07d3d";
+
     private String mostRecentCommitLog =
             "commit 60f6a6cabe727b14897b4d98bca91ce646a07d3d\n" +
                     "Author: Andy Pols <andy@pols.co.uk>\n" +

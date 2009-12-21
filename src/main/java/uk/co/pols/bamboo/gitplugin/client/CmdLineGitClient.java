@@ -27,7 +27,7 @@ public class CmdLineGitClient implements GitClient {
 
         try {
             pullCommand(sourceCodeDirectory).pullUpdatesFromRemoteRepository(buildLogger, repositoryUrl, branch);
-            return logCommand(sourceCodeDirectory, null /* FIXME */).getHeadRevision();
+            return logCommand(sourceCodeDirectory, null /* FIXME */).getHeadRevision(branch);
         } catch (IOException e) {
             throw new RepositoryException("Could not update working dir '" + sourceCodeDirectory.getAbsolutePath() + "' from remote repository '" + repositoryUrl + "'", e);
         }
