@@ -18,7 +18,6 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import uk.co.pols.bamboo.gitplugin.client.CmdLineGitClient;
@@ -30,6 +29,7 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
     private static final Log log = LogFactory.getLog(GitRepository.class);
 
     public synchronized BuildChanges collectChangesSinceLastBuild(final String planKey, final String lastBuiltRevisionKey) throws RepositoryException {
+        final BuildLogger buildLogger = buildLoggerManager.getBuildLogger(planKey);
         final String latestRevision = gitClient().getLatestRevision(
                 gitRepositoryConfig.getRepositoryUrl(),
                 gitRepositoryConfig.getBranch(),
@@ -39,9 +39,13 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
             return new BuildChangesImpl(latestRevision);
         }
 
-        final List<Commit> commits = new ArrayList<Commit>();
-        // TODO populate commits - for now, having something in the list of commits causes Bamboo to trigger a build
-        commits.add(new CommitImpl("git committers"));
+        final List<Commit> commits = gitClient().getChangesSince(
+                buildLogger,
+                gitRepositoryConfig.getRepositoryUrl(),
+                gitRepositoryConfig.getBranch(),
+                planKey,
+                lastBuiltRevisionKey);
+
         return new BuildChangesImpl(latestRevision, commits);
     }
 
@@ -62,7 +66,6 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
                 gitRepositoryConfig.getRepositoryUrl(),
                 gitRepositoryConfig.getBranch(),
                 planKey,
-                vcsRevisionKey,
                 sourceCodeDirectory);
     }
 

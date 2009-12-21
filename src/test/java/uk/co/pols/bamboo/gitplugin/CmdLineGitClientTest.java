@@ -1,12 +1,14 @@
 package uk.co.pols.bamboo.gitplugin;
 
 import com.atlassian.bamboo.build.logger.BuildLogger;
+import com.atlassian.bamboo.commit.Commit;
 import com.atlassian.bamboo.repository.RepositoryException;
 import org.jmock.Expectations;
 import org.jmock.integration.junit3.MockObjectTestCase;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import uk.co.pols.bamboo.gitplugin.client.CmdLineGitClient;
 import uk.co.pols.bamboo.gitplugin.client.commands.*;
@@ -63,7 +65,7 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
             one(gitLogCommand).getHeadRevision(REPOSITORY_BRANCH); will(returnValue(LAST_REVISION_CHECKED));
         }});
 
-        final String result = gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, LAST_REVISION_CHECKED, SOURCE_CODE_DIRECTORY);
+        final String result = gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, SOURCE_CODE_DIRECTORY);
         assertEquals(LAST_REVISION_CHECKED, result);
     }
 
@@ -76,7 +78,7 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
         }});
 
         try {
-            gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, LAST_REVISION_CHECKED, SOURCE_CODE_DIRECTORY);
+            gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, SOURCE_CODE_DIRECTORY);
             fail("Should throw RepositoryException");
         } catch (RepositoryException e) {
             assertEquals("Could not update working dir '/Users/mrowe/src/java_crap/git-bamboo-plugin/src' from remote repository 'repository.url'", e.getMessage());
@@ -94,13 +96,26 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
         }});
 
         try {
-            gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, LAST_REVISION_CHECKED, SOURCE_CODE_DIRECTORY);
+            gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, SOURCE_CODE_DIRECTORY);
             fail("Should throw RepositoryException");
         } catch (RepositoryException e) {
             assertEquals("Could not update working dir '/Users/mrowe/src/java_crap/git-bamboo-plugin/src' from remote repository 'repository.url'", e.getMessage());
             assertSame(ioException, e.getCause());
         }
     }
+
+   public void testGetLatestChangesMakesChangeSetIdAvailable() throws RepositoryException, IOException {
+       checking(new Expectations() {{
+           one(buildLogger).addBuildLogEntry("Getting changes on 'plankey' at 'master' @ 'repository.url' since commit 'last revision'");
+           one(gitListRemoteCommand).getLastCommit(REPOSITORY_URL, REPOSITORY_BRANCH); will(returnValue(LAST_REVISION_CHECKED));
+       }});
+
+       final List<Commit> commits = gitClient.getChangesSince(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, "last revision");
+       assertEquals(1, commits.size());
+       Commit commit = commits.get(0);
+       assertNotNull(commit);
+       assertEquals(LAST_REVISION_CHECKED, commit.guessChangeSetId());
+   }
 
     public void testInitialiseRepositoryCreatesANewLocalRepository() throws RepositoryException, IOException {
         checking(new Expectations() {{

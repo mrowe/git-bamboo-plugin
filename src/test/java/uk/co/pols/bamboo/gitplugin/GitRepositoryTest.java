@@ -5,6 +5,7 @@ import static uk.co.pols.bamboo.gitplugin.SampleCommitFactory.commitWithFile;
 import com.atlassian.bamboo.build.BuildLoggerManager;
 import com.atlassian.bamboo.build.logger.BuildLogger;
 import com.atlassian.bamboo.commit.Commit;
+import com.atlassian.bamboo.commit.CommitImpl;
 import com.atlassian.bamboo.repository.AbstractRepository;
 import com.atlassian.bamboo.repository.Repository;
 import com.atlassian.bamboo.repository.RepositoryException;
@@ -18,11 +19,14 @@ import uk.co.pols.bamboo.gitplugin.client.GitClient;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class GitRepositoryTest extends MockObjectTestCase {
     private static final String PLAN_KEY = "plan-key";
     private static final File SRC_CODE_DIR = new File("test/src/code/directory");
     private static final String RESPOSITORY_URL = "RepositoryUrl";
+    private static final String REPOSITORY_BRANCH = "branch";
 
     private GitRepositoryConfig gitRepositoryConfig = new GitRepositoryConfig();
     private GitClient gitClient = mock(GitClient.class);
@@ -65,40 +69,50 @@ public class GitRepositoryTest extends MockObjectTestCase {
         assertFalse(gitRepository.isRepositoryDifferent(repositoryToCompare));
     }
 
+    public void testReturnsEmptyBuildChangesIfLatestRevisionHasntChanged() throws RepositoryException {
+        checking(new Expectations() {{
+            one(buildLoggerManager).getBuildLogger(PLAN_KEY); will(returnValue(buildLogger));
+            one(gitClient).getLatestRevision(RESPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY); will(returnValue("commit"));
+        }});
+
+        BuildChanges buildChanges = gitRepository.collectChangesSinceLastBuild(PLAN_KEY, "commit");
+        assertNull(buildChanges.getChanges());
+        assertEquals("commit", buildChanges.getVcsRevisionKey());
+    }
+
     public void testUsesAGitClientToDetectTheChangesSinceTheLastBuild() throws RepositoryException {
-//        checking(new Expectations() {{
-//            one(buildLoggerManager).getBuildLogger(PLAN_KEY); will(returnValue(buildLogger));
-//            one(gitClient).getLatestUpdate(buildLogger, RESPOSITORY_URL, PLAN_KEY, "time of previous build", new ArrayList<Commit>(), SRC_CODE_DIR);
-//            will(returnValue("time of this build"));
-//        }});
-//
-//        BuildChanges buildChanges = gitRepository.collectChangesSinceLastBuild(PLAN_KEY, "time of previous build");
-//
-//        assertEquals("time of this build", buildChanges.getVcsRevisionKey());
+        final List<CommitImpl> commits = Collections.singletonList(new CommitImpl("author"));
+        checking(new Expectations() {{
+            one(buildLoggerManager).getBuildLogger(PLAN_KEY); will(returnValue(buildLogger));
+            one(gitClient).getLatestRevision(RESPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY); will(returnValue("latest commit"));
+            one(gitClient).getChangesSince(buildLogger, RESPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, "previous commit"); will(returnValue(commits));
+        }});
+
+        BuildChanges buildChanges = gitRepository.collectChangesSinceLastBuild(PLAN_KEY, "previous commit");
+        assertEquals("latest commit", buildChanges.getVcsRevisionKey());
+        final List<Commit> changes = buildChanges.getChanges();
+        assertNotNull(changes);
+        assertEquals(1, changes.size());
+        assertEquals("author", changes.get(0).getAuthor().getFullName());
     }
 
     public void testInitialisesTheRepositoryIfTheWorkspaceIsEmpty() throws RepositoryException {
-//        checking(new Expectations() {{
-//            one(buildLoggerManager).getBuildLogger(PLAN_KEY); will(returnValue(buildLogger));
-//            one(gitClient).initialiseRepository(SRC_CODE_DIR, PLAN_KEY, null, gitRepositoryConfig, true, buildLogger);
-//            will(returnValue("time of this build"));
-//        }});
-//
-//        String timeOfLastCommmit = gitRepository(true).retrieveSourceCode(PLAN_KEY, null);
-//
-//        assertEquals("time of this build", timeOfLastCommmit);
+        checking(new Expectations() {{
+            one(buildLoggerManager).getBuildLogger(PLAN_KEY); will(returnValue(buildLogger));
+            one(gitClient).initialiseRepository(buildLogger, RESPOSITORY_URL, REPOSITORY_BRANCH, SRC_CODE_DIR);
+            one(gitClient).pullFromRemote(buildLogger, RESPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, SRC_CODE_DIR); will(returnValue("last commit"));
+        }});
+
+        assertEquals("last commit", gitRepository(true).retrieveSourceCode(PLAN_KEY, "a commit"));
     }
 
     public void testChecksOutTheSourceCodeIfTheIfTheWorkspaceIsNotEmpty() throws RepositoryException {
-//        checking(new Expectations() {{
-//            one(buildLoggerManager).getBuildLogger(PLAN_KEY); will(returnValue(buildLogger));
-//            one(gitClient).initialiseRepository(SRC_CODE_DIR, PLAN_KEY, null, gitRepositoryConfig, false, buildLogger);
-//            will(returnValue("time of this build"));
-//        }});
-//
-//        String timeOfLastCommmit = gitRepository(false).retrieveSourceCode(PLAN_KEY, null);
-//
-//        assertEquals("time of this build", timeOfLastCommmit);
+        checking(new Expectations() {{
+            one(buildLoggerManager).getBuildLogger(PLAN_KEY); will(returnValue(buildLogger));
+            one(gitClient).pullFromRemote(buildLogger, RESPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, SRC_CODE_DIR); will(returnValue("last commit"));
+        }});
+
+        assertEquals("last commit", gitRepository(false).retrieveSourceCode(PLAN_KEY, "a commit"));
     }
 
     public void testARepositoryThatIsNotAGitRepositoryIsClearlyDifferent() {
@@ -149,6 +163,7 @@ public class GitRepositoryTest extends MockObjectTestCase {
 
         gitRepository.setBuildLoggerManager(buildLoggerManager);
         gitRepository.setRepositoryUrl(RESPOSITORY_URL);
+        gitRepository.setBranch(REPOSITORY_BRANCH);
         return gitRepository;
     }
 
