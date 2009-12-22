@@ -17,19 +17,19 @@ public class ExecutorGitPullCommandTest extends MockObjectTestCase {
 
     public void testExecuteAPullCommandAgainstTheRemoteBranch() throws IOException {
         checking(new Expectations() {{
-            one(buildLogger).addBuildLogEntry("Pulling source from branch 'some-branch' @ 'gitReopsitoryUrl' into '" + SOURCE_CODE_DIRECTORY.getAbsolutePath() + "'.");
-            one(commandExecutor).execute(new String[]{GIT_EXE, "pull", "origin", "some-branch"}, SOURCE_CODE_DIRECTORY); will(returnValue("COMMAND OUTPUT"));
+            one(buildLogger).addBuildLogEntry("Pulling source from branch 'some-branch' @ 'gitRepositoryUrl' into '" + SOURCE_CODE_DIRECTORY.getAbsolutePath() + "'.");
+            one(commandExecutor).execute(new String[]{GIT_EXE, "pull", "gitRepositoryUrl", "some-branch:some-branch"}, SOURCE_CODE_DIRECTORY); will(returnValue("COMMAND OUTPUT"));
             one(buildLogger).addBuildLogEntry("COMMAND OUTPUT");
         }});
 
         ExecutorGitPullCommand gitPullCommand = new ExecutorGitPullCommand(GIT_EXE, SOURCE_CODE_DIRECTORY, commandExecutor);
-        gitPullCommand.pullUpdatesFromRemoteRepository(buildLogger, "gitReopsitoryUrl", "some-branch");
+        gitPullCommand.pullUpdatesFromRemoteRepository(buildLogger, "gitRepositoryUrl", "some-branch");
     }
 
     public void testThrowsAnIOExceptionIfGitReturnsAnError() throws IOException {
         checking(new Expectations() {{
             one(buildLogger).addBuildLogEntry("Pulling source from branch 'some-branch' @ 'gitRepositoryUrl' into '" + SOURCE_CODE_DIRECTORY.getAbsolutePath() + "'.");
-            one(commandExecutor).execute(new String[]{GIT_EXE, "pull", "origin", "some-branch"}, SOURCE_CODE_DIRECTORY); will(returnValue("fatal: something bad happened"));
+            one(commandExecutor).execute(new String[]{GIT_EXE, "pull", "gitRepositoryUrl", "some-branch:some-branch"}, SOURCE_CODE_DIRECTORY); will(returnValue("fatal: something bad happened"));
         }});
 
         ExecutorGitPullCommand gitPullCommand = new ExecutorGitPullCommand(GIT_EXE, SOURCE_CODE_DIRECTORY, commandExecutor);
