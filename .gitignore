@@ -22,4 +22,6 @@ lib/jsch-0.1.31.jar
 lib/junit-3.8.1.jar
 lib/log4j-1.2.12.jar
 lib/oscore-2.2.7.jar
+lib/rife-continuations-0.0.2.jar
+lib/spring-context-2.0.7.jar
 classes/atlassian-plugin.xml
