@@ -32,7 +32,11 @@ public class CmdLineGitClient implements GitClient {
 
         try {
             pullCommand(sourceCodeDirectory).pullUpdatesFromRemoteRepository(buildLogger, repositoryUrl, branch);
-            return logCommand(sourceCodeDirectory, null /* FIXME */).getHeadRevision(branch);
+            final String headRevision = logCommand(sourceCodeDirectory, null /* FIXME */).getHeadRevision(branch);
+            if (headRevision.length() < 1) {
+                throw new RepositoryException("Could not determine revision for changes pulled into '" + sourceCodeDirectory.getAbsolutePath() + "' from '" + repositoryUrl + "'.");
+            }
+            return headRevision;
         } catch (IOException e) {
             throw new RepositoryException("Could not update working dir '" + sourceCodeDirectory.getAbsolutePath() + "' from remote repository '" + repositoryUrl + "'", e);
         }

@@ -104,7 +104,22 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
         }
     }
 
-   public void testGetLatestChangesMakesChangeSetIdAvailable() throws RepositoryException, IOException {
+    public void testPullFromRemoteThrowsRepositoryExceptionIfItCouldNotDetermineRevision() throws IOException {
+        checking(new Expectations() {{
+            one(buildLogger).addBuildLogEntry("Pulling changes on 'plankey' from 'master' @ 'repository.url");
+            one(gitPullCommand).pullUpdatesFromRemoteRepository(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH);
+            one(gitLogCommand).getHeadRevision(REPOSITORY_BRANCH); will(returnValue(""));
+        }});
+
+        try {
+            gitClient.pullFromRemote(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, SOURCE_CODE_DIRECTORY);
+            fail("Should throw RepositoryException");
+        } catch (RepositoryException e) {
+            assertEquals("Could not determine revision for changes pulled into '/Users/mrowe/src/java_crap/git-bamboo-plugin/src' from 'repository.url'.", e.getMessage());
+        }
+    }
+
+    public void testGetLatestChangesMakesChangeSetIdAvailable() throws RepositoryException, IOException {
        checking(new Expectations() {{
            one(buildLogger).addBuildLogEntry("Getting changes on 'plankey' at 'master' @ 'repository.url' since commit 'last revision'");
            one(gitListRemoteCommand).getLastCommit(REPOSITORY_URL, REPOSITORY_BRANCH); will(returnValue(LAST_REVISION_CHECKED));
