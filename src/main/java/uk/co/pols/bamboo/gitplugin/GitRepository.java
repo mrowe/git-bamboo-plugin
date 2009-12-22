@@ -31,7 +31,6 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
 
     public synchronized BuildChanges collectChangesSinceLastBuild(final String planKey, final String lastBuiltRevisionKey) throws RepositoryException {
         final String latestRevision = gitClient().getLatestRevision(
-                buildLoggerManager.getBuildLogger(planKey),
                 gitRepositoryConfig.getRepositoryUrl(),
                 gitRepositoryConfig.getBranch(),
                 planKey);

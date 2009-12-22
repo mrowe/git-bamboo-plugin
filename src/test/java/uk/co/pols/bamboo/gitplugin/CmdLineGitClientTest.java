@@ -35,7 +35,7 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
             one(gitListRemoteCommand).getLastCommit(REPOSITORY_URL, REPOSITORY_BRANCH); will(returnValue(LAST_REVISION_CHECKED));
         }});
 
-        String latestUpdate = gitClient.getLatestRevision(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY);
+        String latestUpdate = gitClient.getLatestRevision(REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY);
 
         assertEquals(LAST_REVISION_CHECKED, latestUpdate);
     }
@@ -48,7 +48,7 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
         }});
 
         try {
-            gitClient.getLatestRevision(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY);
+            gitClient.getLatestRevision(REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY);
             fail("Should throw RepositoryException");
         } catch (RepositoryException e) {
             assertEquals("Could not get latest revision from remote repository 'repository.url'", e.getMessage());
