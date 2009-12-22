@@ -14,7 +14,7 @@ public class CmdLineGitClient implements GitClient {
     private GitCommandDiscoverer gitCommandDiscoverer = gitCommandDiscoverer();
 
     public String getLatestRevision(BuildLogger buildLogger, String repositoryUrl, String branch, String planKey) throws RepositoryException {
-        log.info(buildLogger.addBuildLogEntry("Checking for changes on '" + planKey + "' at '" + branch + "' @ '" + repositoryUrl + "'"));
+        log.info("Checking for changes on '" + planKey + "' at '" + branch + "' @ '" + repositoryUrl + "'");
         try {
             return listRemoteCommand().getLastCommit(repositoryUrl, branch);
         } catch (IOException e) {

@@ -32,7 +32,6 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
 
     public void testGetLatestRevisionReturnsTheMostRecentRemoteCommit() throws RepositoryException, IOException {
         checking(new Expectations() {{
-            one(buildLogger).addBuildLogEntry("Checking for changes on 'plankey' at 'master' @ 'repository.url'");
             one(gitListRemoteCommand).getLastCommit(REPOSITORY_URL, REPOSITORY_BRANCH); will(returnValue(LAST_REVISION_CHECKED));
         }});
 
@@ -45,7 +44,6 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
         final IOException ioException = new IOException("EXPECTED EXCEPTION");
 
         checking(new Expectations() {{
-            one(buildLogger).addBuildLogEntry("Checking for changes on 'plankey' at 'master' @ 'repository.url'");
             one(gitListRemoteCommand).getLastCommit(REPOSITORY_URL, REPOSITORY_BRANCH); will(throwException(ioException));
         }});
 
