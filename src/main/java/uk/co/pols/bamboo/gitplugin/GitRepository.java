@@ -54,6 +54,9 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
 
     /**
      * This is called by the agent to get the latest code.
+     *
+     * TODO: There is a race condition where the agent could check out a more recent commit from the change set
+     * detected by the build server - Yuck.
      */
     public String retrieveSourceCode(final String planKey, final String vcsRevisionKey) throws RepositoryException {
         final BuildLogger buildLogger = buildLoggerManager.getBuildLogger(planKey);
