@@ -1,24 +1,24 @@
 package uk.co.pols.bamboo.gitplugin;
 
+import java.io.File;
+import java.util.List;
+
 import com.atlassian.bamboo.build.logger.BuildLogger;
 import com.atlassian.bamboo.commit.Commit;
 import com.atlassian.bamboo.commit.CommitFile;
-import com.atlassian.bamboo.commit.CommitImpl;
-import com.atlassian.bamboo.repository.*;
+import com.atlassian.bamboo.repository.AbstractRepository;
+import com.atlassian.bamboo.repository.Repository;
+import com.atlassian.bamboo.repository.RepositoryException;
+import com.atlassian.bamboo.repository.WebRepositoryEnabledRepository;
 import com.atlassian.bamboo.utils.error.ErrorCollection;
 import com.atlassian.bamboo.v2.build.BuildChanges;
 import com.atlassian.bamboo.v2.build.BuildChangesImpl;
 import com.atlassian.bamboo.ww2.actions.build.admin.create.BuildConfiguration;
+
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.lang.builder.CompareToBuilder;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import uk.co.pols.bamboo.gitplugin.client.CmdLineGitClient;
 import uk.co.pols.bamboo.gitplugin.client.GitClient;
@@ -26,8 +26,10 @@ import uk.co.pols.bamboo.gitplugin.client.GitClient;
 public class GitRepository extends AbstractRepository implements WebRepositoryEnabledRepository {
     private final GitRepositoryConfig gitRepositoryConfig = gitRepositoryConfig();
 
-    private static final Log log = LogFactory.getLog(GitRepository.class);
-
+    /*
+     * This is called by bamboo when a build has been triggered to calculate the changes since the previous build.
+     * It is executed on the server
+     */
     public synchronized BuildChanges collectChangesSinceLastBuild(final String planKey, final String lastBuiltRevisionKey) throws RepositoryException {
         final BuildLogger buildLogger = buildLoggerManager.getBuildLogger(planKey);
         final String latestRevision = gitClient().getLatestRevision(
@@ -49,6 +51,9 @@ public class GitRepository extends AbstractRepository implements WebRepositoryEn
         return new BuildChangesImpl(latestRevision, commits);
     }
 
+    /**
+     * This is called by the agent to get the latest code.
+     */
     public String retrieveSourceCode(final String planKey, final String vcsRevisionKey) throws RepositoryException {
         final BuildLogger buildLogger = buildLoggerManager.getBuildLogger(planKey);
         final File sourceCodeDirectory = getSourceCodeDirectory(planKey);
