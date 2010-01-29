@@ -1,17 +1,23 @@
 package uk.co.pols.bamboo.gitplugin;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+
 import com.atlassian.bamboo.build.logger.BuildLogger;
 import com.atlassian.bamboo.commit.Commit;
 import com.atlassian.bamboo.repository.RepositoryException;
+
 import org.jmock.Expectations;
 import org.jmock.integration.junit3.MockObjectTestCase;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-
 import uk.co.pols.bamboo.gitplugin.client.CmdLineGitClient;
-import uk.co.pols.bamboo.gitplugin.client.commands.*;
+import uk.co.pols.bamboo.gitplugin.client.commands.GitInitCommand;
+import uk.co.pols.bamboo.gitplugin.client.commands.GitListRemoteCommand;
+import uk.co.pols.bamboo.gitplugin.client.commands.GitLogCommand;
+import uk.co.pols.bamboo.gitplugin.client.commands.GitPullCommand;
+import uk.co.pols.bamboo.gitplugin.client.commands.GitRemoteCommand;
 
 public class CmdLineGitClientTest extends MockObjectTestCase {
     private static final String LAST_REVISION_CHECKED = "1cc17a8203f7c5c82e89ae5f687d12b7be65951e";
@@ -23,10 +29,11 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
     private BuildLogger buildLogger = mock(BuildLogger.class);
     private GitPullCommand gitPullCommand = mock(GitPullCommand.class);
     private GitLogCommand gitLogCommand = mock(GitLogCommand.class);
+    private GitLogCommand gitRemoteLogCommand = mock(GitLogCommand.class, "remoteGitLogCommand");
     private GitInitCommand gitInitCommand = mock(GitInitCommand.class);
     private GitRemoteCommand gitRemoteCommand = mock(GitRemoteCommand.class);
     private GitListRemoteCommand gitListRemoteCommand = mock(GitListRemoteCommand.class);
-    private CmdLineGitClient gitClient = gitClient();
+    private final CmdLineGitClient gitClient = gitClient();
 
     /*
     String getLatestRevision(BuildLogger buildLogger, String repositoryUrl, String branch, String planKey) throws RepositoryException;
@@ -120,17 +127,28 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
     }
 
     public void testGetLatestChangesMakesChangeSetIdAvailable() throws RepositoryException, IOException {
-       checking(new Expectations() {{
-           one(buildLogger).addBuildLogEntry("Getting changes on 'plankey' at 'master' @ 'repository.url' since commit 'last revision'");
-           one(gitListRemoteCommand).getLastCommit(REPOSITORY_URL, REPOSITORY_BRANCH); will(returnValue(LAST_REVISION_CHECKED));
-       }});
+        final Commit commit = mock(Commit.class);
+        checking(new Expectations() {{
+            one(buildLogger).addBuildLogEntry("Getting changes on 'plankey' at 'master' @ 'repository.url' since commit 'last revision'");
+            one(gitRemoteLogCommand).extractCommits(); will(returnValue(Collections.singletonList(commit)));
+        }});
 
-       final List<Commit> commits = gitClient.getChangesSince(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, "last revision");
-       assertEquals(1, commits.size());
-       Commit commit = commits.get(0);
-       assertNotNull(commit);
-       assertEquals(LAST_REVISION_CHECKED, commit.guessChangeSetId());
-   }
+        final List<Commit> commits = gitClient.getChangesSince(buildLogger, REPOSITORY_URL, REPOSITORY_BRANCH, PLAN_KEY, "last revision");
+        assertEquals(1, commits.size());
+        assertSame(commit, commits.get(0));
+    }
+
+    public void testGetLatestChangesExecutesRemoteLogForSshRepository() throws RepositoryException, IOException {
+        final Commit commit = mock(Commit.class);
+        checking(new Expectations() {{
+            one(buildLogger).addBuildLogEntry("Getting changes on 'plankey' at 'master' @ 'ssh://foo@bar.com/srv/git/myrepo.git' since commit 'deadcafe'");
+            one(gitRemoteLogCommand).extractCommits(); will(returnValue(Collections.singletonList(commit)));
+        }});
+
+        final List<Commit> commits = gitClient.getChangesSince(buildLogger, "ssh://foo@bar.com/srv/git/myrepo.git", REPOSITORY_BRANCH, PLAN_KEY, "deadcafe");
+        assertEquals(1, commits.size());
+        assertSame(commit, commits.get(0));
+    }
 
     public void testInitialiseRepositoryCreatesANewLocalRepository() throws RepositoryException, IOException {
         checking(new Expectations() {{
@@ -185,6 +203,10 @@ public class CmdLineGitClientTest extends MockObjectTestCase {
 
             protected GitLogCommand logCommand(File sourceCodeDirectory, String lastRevisionChecked) {
                 return gitLogCommand;
+            }
+
+            protected GitLogCommand remoteLogCommand(String repositoryUrl, String branch, String lastRevisionChecked) {
+                return gitRemoteLogCommand;
             }
 
             protected GitInitCommand initCommand(File sourceCodeDirectory) {
